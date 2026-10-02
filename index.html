@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>IB Portal — Trateck</title>
+<link rel="icon" type="image/svg+xml" href="trateck-favicon.svg">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0F1C3A;
+    --navy-lt: #15264C;
+    --teal:    #1D3162;
+    --gold:    #AAB5C1;
+    --gold-lt: #D4DAE1;
+    --cream:   #F5F7FA;
+    --steel:   #8A96A3;
+    --line:    rgba(245,247,250,0.09);
+    --green:   #6FBF8F;
+    --err:     #E8837A;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--navy);
+    color: var(--cream);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  body.arabic { font-family: 'Noto Sans Arabic', sans-serif; direction: rtl; text-align: right; }
+
+  .lang-en { display: block; }
+  .lang-ar { display: none; }
+  span.lang-en { display: inline; }
+  body.arabic .lang-en { display: none; }
+  body.arabic .lang-ar { display: block; }
+  body.arabic span.lang-ar { display: inline; }
+
+  .view { display: none; }
+  .view.show { display: block; }
+
+  /* ── NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 0 40px; height: 68px;
+    background: var(--navy-lt); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .nav-left { display: flex; align-items: center; gap: 14px; }
+  .nav-logo img { height: 40px; width: auto; display: block; }
+  .nav-tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--navy); background: var(--gold); padding: 3px 8px; border-radius: 2px;
+  }
+  body.arabic .nav-tag { letter-spacing: 0; }
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+  .nav-who { font-size: 13px; color: var(--steel); }
+  .nav-who strong { color: var(--cream); font-weight: 600; }
+  .lang-toggle { display: flex; border: 1px solid rgba(170,181,193,0.3); border-radius: 3px; overflow: hidden; }
+  .lang-btn { padding: 4px 11px; font-size: 11px; font-weight: 700; color: var(--steel); background: transparent; border: none; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .lang-btn.active { background: var(--gold); color: var(--navy); }
+  .link-btn { font-size: 12px; color: var(--steel); background: none; border: none; cursor: pointer; font-family: inherit; }
+  .link-btn:hover { color: var(--gold-lt); }
+
+  /* ── LOGIN */
+  .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .auth-box {
+    width: 100%; max-width: 420px; background: var(--navy-lt); border: 1px solid var(--line);
+    border-top: 3px solid var(--gold); padding: 40px 36px;
+  }
+  .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .auth-logo img { height: 46px; }
+  .auth-title { font-family: 'Satoshi', 'Inter', sans-serif; font-size: 24px; font-weight: 500; margin-bottom: 6px; }
+  body.arabic .auth-title { font-family: 'Noto Sans Arabic', sans-serif; }
+  .auth-sub { font-size: 13px; color: var(--steel); margin-bottom: 26px; line-height: 1.6; }
+  .form-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--steel); margin-bottom: 8px; }
+  body.arabic .form-label { letter-spacing: 0; }
+  .form-input {
+    width: 100%; padding: 12px 14px; margin-bottom: 18px;
+    background: var(--navy); border: 1px solid rgba(170,181,193,0.2); color: var(--cream);
+    font-size: 15px; font-family: inherit; outline: none;
+  }
+  .form-input:focus { border-color: var(--gold); }
+  .btn-primary {
+    width: 100%; padding: 13px; background: var(--gold); color: var(--navy); border: none; cursor: pointer;
+    font-size: 14px; font-weight: 700; font-family: inherit; transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--gold-lt); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-google {
+    width: 100%; padding: 12px; margin-top: 12px; background: #fff; color: #1f1f1f; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 600; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .btn-google svg { width: 18px; height: 18px; }
+  .auth-row { display: flex; justify-content: space-between; align-items: center; margin: -8px 0 18px; }
+  .msg { font-size: 13px; margin-top: 14px; line-height: 1.6; display: none; }
+  .msg.show { display: block; }
+  .msg.err { color: var(--err); }
+  .msg.ok { color: var(--green); }
+
+  /* ── DASHBOARD */
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 36px 24px 80px; }
+  .page-title { font-family: 'Satoshi', 'Inter', sans-serif; font-size: 26px; font-weight: 500; margin-bottom: 4px; }
+  body.arabic .page-title { font-family: 'Noto Sans Arabic', sans-serif; }
+  .page-sub { font-size: 13px; color: var(--steel); margin-bottom: 28px; }
+  .code { font-family: 'Inter', monospace; font-weight: 700; color: var(--gold-lt); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .tile { background: var(--navy-lt); border: 1px solid var(--line); padding: 18px 20px; }
+  .tile-value { font-family: 'Satoshi', 'Inter', sans-serif; font-size: 30px; font-weight: 700; color: var(--cream); }
+  .tile-label { font-size: 11px; color: var(--steel); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  body.arabic .tile-label { letter-spacing: 0; }
+
+  .card { background: var(--navy-lt); border: 1px solid var(--line); padding: 22px 24px; margin-bottom: 20px; }
+  .card-title { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold-lt); margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  body.arabic .card-title { letter-spacing: 0; }
+
+  .link-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .link-row:last-child { border-bottom: none; }
+  .link-product { font-weight: 600; min-width: 120px; }
+  .link-url { font-family: monospace; font-size: 13px; color: var(--steel); word-break: break-all; flex: 1; min-width: 200px; direction: ltr; text-align: left; }
+  .copy-btn { padding: 6px 14px; background: transparent; border: 1px solid rgba(170,181,193,0.35); color: var(--gold-lt); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .copy-btn:hover { border-color: var(--gold); }
+
+  .sub-list { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sub-pill { padding: 8px 12px; border: 1px solid rgba(170,181,193,0.25); font-size: 13px; cursor: pointer; background: transparent; color: var(--cream); font-family: inherit; }
+  .sub-pill.active { border-color: var(--gold); background: rgba(170,181,193,0.1); }
+  .sub-pill span { color: var(--steel); margin-inline-start: 6px; }
+
+  .search {
+    width: 100%; max-width: 360px; padding: 10px 14px; margin-bottom: 14px;
+    background: var(--navy); border: 1px solid rgba(170,181,193,0.2); color: var(--cream); font-size: 14px; font-family: inherit; outline: none;
+  }
+  .search:focus { border-color: var(--gold); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: start; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--steel); padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  body.arabic th { letter-spacing: 0; }
+  td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(245,247,250,0.02); }
+  .logins { display: flex; flex-wrap: wrap; gap: 6px; direction: ltr; }
+  body.arabic .logins { justify-content: flex-end; }
+  .login-chip { font-family: 'Inter', monospace; font-size: 13px; font-weight: 600; padding: 2px 8px; background: rgba(170,181,193,0.12); color: var(--gold-lt); }
+  .muted { color: var(--steel); }
+  .empty { padding: 24px 12px; color: var(--steel); font-size: 14px; }
+  .note { font-size: 12px; color: var(--steel); margin-top: 12px; line-height: 1.6; }
+
+  .center-box { max-width: 520px; margin: 12vh auto; padding: 0 24px; text-align: center; }
+  .center-box h2 { font-family: 'Satoshi', 'Inter', sans-serif; font-weight: 500; font-size: 24px; margin-bottom: 10px; }
+  body.arabic .center-box h2 { font-family: 'Noto Sans Arabic', sans-serif; }
+  .center-box p { color: var(--steel); font-size: 14px; line-height: 1.7; margin-bottom: 22px; }
+  .spinner { width: 34px; height: 34px; border: 3px solid rgba(170,181,193,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--gold); color: var(--navy); padding: 10px 18px; font-size: 13px; font-weight: 600; display: none; z-index: 50; }
+  .toast.show { display: block; }
+
+  @media (max-width: 700px) {
+    nav { padding: 0 16px; height: 60px; }
+    .nav-logo img { height: 32px; }
+    .nav-who { display: none; }
+    .wrap { padding: 24px 16px 60px; }
+    .auth-box { padding: 32px 22px; }
+    th.col-under, td.col-under { display: none; }
+  }
+</style>
+</head>
+<body id="body">
+
+<!-- Loading -->
+<div class="view show" id="view-loading">
+  <div class="center-box"><div class="spinner"></div><p><span class="lang-en">Loading…</span><span class="lang-ar">جارٍ التحميل…</span></p></div>
+</div>
+
+<!-- Sign in -->
+<div class="view" id="view-login">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo"><img src="trateck-logo-light.svg" alt="Trateck"><span class="nav-tag">IB</span></div>
+      <h1 class="auth-title"><span class="lang-en">IB Portal</span><span class="lang-ar">بوابة الوسيط</span></h1>
+      <p class="auth-sub">
+        <span class="lang-en">Sign in with the same email and password as your Trateck client account.</span>
+        <span class="lang-ar">سجّل الدخول بنفس البريد الإلكتروني وكلمة المرور الخاصين بحسابك كعميل في Trateck.</span>
+      </p>
+      <form id="login-form" onsubmit="return false;">
+        <label class="form-label" for="email"><span class="lang-en">Email</span><span class="lang-ar">البريد الإلكتروني</span></label>
+        <input class="form-input" type="email" id="email" autocomplete="username" dir="ltr" required>
+        <label class="form-label" for="password"><span class="lang-en">Password</span><span class="lang-ar">كلمة المرور</span></label>
+        <input class="form-input" type="password" id="password" autocomplete="current-password" dir="ltr" required>
+        <div class="auth-row">
+          <button type="button" class="link-btn" onclick="forgotPassword()"><span class="lang-en">Forgot password?</span><span class="lang-ar">نسيت كلمة المرور؟</span></button>
+          <div class="lang-toggle">
+            <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+            <button type="button" class="lang-btn" data-lang="ar" onclick="setLang('ar')">ع</button>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" id="login-btn" onclick="emailLogin()"><span class="lang-en">Sign in</span><span class="lang-ar">تسجيل الدخول</span></button>
+        <button type="button" class="btn-google" onclick="googleLogin()">
+          <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+          <span class="lang-en">Continue with Google</span><span class="lang-ar">المتابعة عبر Google</span>
+        </button>
+      </form>
+      <p class="msg" id="login-msg"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Signed in, but not an IB -->
+<div class="view" id="view-denied">
+  <div class="center-box">
+    <img src="trateck-logo-light.svg" alt="Trateck" style="height:44px;margin-bottom:28px;">
+    <h2><span class="lang-en">This account isn't an IB account</span><span class="lang-ar">هذا الحساب ليس حساب وسيط</span></h2>
+    <p>
+      <span class="lang-en">You're signed in as <strong id="denied-email"></strong>, which isn't linked to an introducing broker. If you're a Trateck IB, contact us and we'll link your account.</span>
+      <span class="lang-ar">أنت مسجّل الدخول باسم <strong id="denied-email-ar"></strong>، وهو غير مرتبط بوسيط. إذا كنت وسيطاً لدى Trateck، تواصل معنا وسنقوم بربط حسابك.</span>
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a class="copy-btn" style="text-decoration:none;padding:10px 18px;" href="https://trateck.me/portal.html"><span class="lang-en">Go to client portal</span><span class="lang-ar">الذهاب إلى بوابة العميل</span></a>
+      <a class="copy-btn" style="text-decoration:none;padding:10px 18px;" href="https://wa.me/35794595995" target="_blank" rel="noopener"><span class="lang-en">WhatsApp us</span><span class="lang-ar">راسلنا عبر واتساب</span></a>
+      <button class="copy-btn" style="padding:10px 18px;" onclick="logout()"><span class="lang-en">Sign out</span><span class="lang-ar">تسجيل الخروج</span></button>
+    </div>
+    <p class="msg err" id="denied-error" style="margin-top:20px;"></p>
+  </div>
+</div>
+
+<!-- IB dashboard -->
+<div class="view" id="view-dash">
+  <nav>
+    <div class="nav-left">
+      <img class="nav-logo" src="trateck-logo-light.svg" alt="Trateck" style="height:40px;">
+      <span class="nav-tag">IB</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-who"><strong id="nav-ib-name"></strong> <span class="code" id="nav-ib-code"></span></span>
+      <div class="lang-toggle">
+        <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" data-lang="ar" onclick="setLang('ar')">ع</button>
+      </div>
+      <button class="link-btn" onclick="logout()"><span class="lang-en">Sign out</span><span class="lang-ar">خروج</span></button>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <h1 class="page-title"><span id="dash-name"></span> <span class="code" id="dash-code"></span></h1>
+    <p class="page-sub" id="dash-sub"></p>
+
+    <div class="tiles">
+      <div class="tile"><div class="tile-value" id="t-clients">—</div><div class="tile-label"><span class="lang-en">Clients</span><span class="lang-ar">العملاء</span></div></div>
+      <div class="tile"><div class="tile-value" id="t-accounts">—</div><div class="tile-label"><span class="lang-en">Trading accounts</span><span class="lang-ar">حسابات التداول</span></div></div>
+      <div class="tile" id="t-subs-tile" style="display:none;"><div class="tile-value" id="t-subs">—</div><div class="tile-label"><span class="lang-en">Sub-IBs</span><span class="lang-ar">الوسطاء الفرعيون</span></div></div>
+    </div>
+
+    <div class="card" id="links-card">
+      <div class="card-title"><span class="lang-en">Your signup links</span><span class="lang-ar">روابط التسجيل الخاصة بك</span></div>
+      <div id="links-list"></div>
+      <p class="note">
+        <span class="lang-en">Clients who open an account through one of these links are added to you automatically.</span>
+        <span class="lang-ar">العملاء الذين يفتحون حساباً عبر أحد هذه الروابط يُضافون إليك تلقائياً.</span>
+      </p>
+    </div>
+
+    <div class="card" id="subs-card" style="display:none;">
+      <div class="card-title"><span class="lang-en">Sub-IBs</span><span class="lang-ar">الوسطاء الفرعيون</span></div>
+      <div class="sub-list" id="subs-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="lang-en">Clients</span><span class="lang-ar">العملاء</span></div>
+      <input class="search" id="client-search" oninput="renderClients()" placeholder="Search name or account number…">
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th><span class="lang-en">Client</span><span class="lang-ar">العميل</span></th>
+            <th><span class="lang-en">MT5 accounts</span><span class="lang-ar">حسابات MT5</span></th>
+            <th class="col-under" id="th-under" style="display:none;"><span class="lang-en">Under</span><span class="lang-ar">تابع لـ</span></th>
+          </tr></thead>
+          <tbody id="clients-body"></tbody>
+        </table>
+      </div>
+      <p class="note">
+        <span class="lang-en">Read-only. For anything about a client's account, contact Trateck.</span>
+        <span class="lang-ar">للعرض فقط. لأي أمر يخص حساب عميل، تواصل مع Trateck.</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function setLang(lang) {
+    const ar = lang === 'ar';
+    const body = document.getElementById('body');
+    body.classList.toggle('arabic', ar);
+    body.setAttribute('dir', ar ? 'rtl' : 'ltr');
+    body.setAttribute('lang', ar ? 'ar' : 'en');
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+    const s = document.getElementById('client-search');
+    if (s) s.placeholder = ar ? 'ابحث بالاسم أو رقم الحساب…' : 'Search name or account number…';
+    try { localStorage.setItem('preferred_lang', lang); } catch (e) { /* storage unavailable */ }
+    if (window.renderAll) window.renderAll();
+  }
+  function isAr() { return document.getElementById('body').classList.contains('arabic'); }
+  try { if (localStorage.getItem('preferred_lang') === 'ar') setLang('ar'); } catch (e) { /* storage unavailable */ }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('show', v.id === id));
+  }
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyC6Ir7zcz5-61Ox65NYpeXXUSVfqkF0Ouk",
+    authDomain: "trateck-b9d12.firebaseapp.com",
+    projectId: "trateck-b9d12",
+    storageBucket: "trateck-b9d12.firebasestorage.app",
+    messagingSenderId: "443290089724",
+    appId: "1:443290089724:web:0cc42a095de7ba8da0ff79"
+  });
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // What this IB may see: their access record (written by Trateck staff
+  // when they link the IB to this login) and the "IB cards" of their own
+  // clients -- name and MT5 account numbers only. Nothing else about a
+  // client is readable from here (enforced by the database rules).
+  let access = null;
+  let clients = [];
+  let subFilter = 'all';
+  let unsubs = [];
+
+  function msg(text, kind) {
+    const el = document.getElementById('login-msg');
+    el.textContent = text; el.className = 'msg show ' + (kind || 'err');
+  }
+  function authError(e) {
+    const ar = isAr();
+    const map = {
+      'auth/invalid-credential': ['Incorrect email or password.', 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'],
+      'auth/invalid-login-credentials': ['Incorrect email or password.', 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'],
+      'auth/wrong-password': ['Incorrect email or password.', 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'],
+      'auth/user-not-found': ['Incorrect email or password.', 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'],
+      'auth/too-many-requests': ['Too many attempts. Try again in a few minutes.', 'محاولات كثيرة. حاول مجدداً بعد بضع دقائق.'],
+      'auth/network-request-failed': ['Check your internet connection.', 'تحقق من اتصالك بالإنترنت.'],
+    };
+    const m = map[e && e.code] || ['Something went wrong. Please try again.', 'حدث خطأ. الرجاء المحاولة مجدداً.'];
+    return ar ? m[1] : m[0];
+  }
+
+  window.emailLogin = async function() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    if (!email || !password) { msg(isAr() ? 'أدخل البريد الإلكتروني وكلمة المرور.' : 'Enter your email and password.'); return; }
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true;
+    try { await signInWithEmailAndPassword(auth, email, password); }
+    catch (e) { msg(authError(e)); }
+    finally { btn.disabled = false; }
+  };
+  window.googleLogin = async function() {
+    try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+    catch (e) { if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') msg(authError(e)); }
+  };
+  window.forgotPassword = async function() {
+    const email = document.getElementById('email').value.trim();
+    if (!email) { msg(isAr() ? 'اكتب بريدك الإلكتروني أولاً ثم اضغط "نسيت كلمة المرور".' : 'Type your email first, then tap "Forgot password?".'); return; }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      msg(isAr() ? 'إذا كان هذا البريد مسجلاً، فقد أرسلنا إليه رابط إعادة تعيين كلمة المرور.' : 'If that email is registered, we\'ve sent it a password reset link.', 'ok');
+    } catch (e) { msg(authError(e)); }
+  };
+  window.logout = async function() {
+    unsubs.forEach(u => u()); unsubs = [];
+    await signOut(auth);
+  };
+
+  onAuthStateChanged(auth, (user) => {
+    unsubs.forEach(u => u()); unsubs = [];
+    access = null; clients = []; subFilter = 'all';
+    if (!user) { showView('view-login'); return; }
+    showView('view-loading');
+    const accessUnsub = onSnapshot(doc(db, 'ib_portal_access', user.uid), (snap) => {
+      if (!snap.exists()) {
+        document.getElementById('denied-email').textContent = user.email || '';
+        document.getElementById('denied-email-ar').textContent = user.email || '';
+        showView('view-denied');
+        return;
+      }
+      const first = !access || access.ib_id !== snap.data().ib_id || access.tier !== snap.data().tier;
+      access = snap.data();
+      if (first) listenClients();
+      renderAll();
+      showView('view-dash');
+    }, (err) => {
+      console.error(err);
+      document.getElementById('denied-email').textContent = user.email || '';
+      document.getElementById('denied-email-ar').textContent = user.email || '';
+      document.getElementById('denied-error').textContent = isAr() ? 'تعذّر التحقق من صلاحية الوصول. حاول مجدداً لاحقاً.' : 'Couldn\'t check your access. Please try again later.';
+      document.getElementById('denied-error').classList.add('show');
+      showView('view-denied');
+    });
+    unsubs.push(accessUnsub);
+  });
+
+  // A main IB sees everyone under them (their own clients and their
+  // sub-IBs' clients); a sub-IB sees only their own.
+  let clientsUnsub = null;
+  function listenClients() {
+    if (clientsUnsub) { clientsUnsub(); unsubs = unsubs.filter(u => u !== clientsUnsub); }
+    const field = access.tier === 'sub' ? 'ib_id' : 'main_ib_id';
+    clientsUnsub = onSnapshot(query(collection(db, 'ib_clients'), where(field, '==', access.ib_id)), (snap) => {
+      clients = snap.docs.map(d => d.data()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      renderAll();
+    }, (err) => {
+      console.error(err);
+      document.getElementById('clients-body').innerHTML = `<tr><td colspan="3" class="empty">${isAr() ? 'تعذّر تحميل العملاء.' : 'Couldn\'t load your clients.'}</td></tr>`;
+    });
+    unsubs.push(clientsUnsub);
+  }
+
+  window.renderAll = function() {
+    if (!access) return;
+    const ar = isAr();
+    const isMain = access.tier !== 'sub';
+
+    document.getElementById('nav-ib-name').textContent = access.ib_name || '';
+    document.getElementById('nav-ib-code').textContent = access.ib_code ? `(${access.ib_code})` : '';
+    document.getElementById('dash-name').textContent = access.ib_name || '';
+    document.getElementById('dash-code').textContent = access.ib_code || '';
+    document.getElementById('dash-sub').textContent = isMain
+      ? (ar ? 'وسيط رئيسي' : 'Main IB')
+      : (ar ? `وسيط فرعي لدى ${access.main_ib_name || ''}` : `Sub-IB of ${access.main_ib_name || ''}`);
+
+    document.getElementById('t-clients').textContent = clients.length;
+    document.getElementById('t-accounts').textContent = clients.reduce((n, c) => n + (c.logins || []).length, 0);
+    document.getElementById('t-subs-tile').style.display = isMain && (access.subs || []).length ? '' : 'none';
+    document.getElementById('t-subs').textContent = (access.subs || []).length;
+
+    const links = access.links || [];
+    document.getElementById('links-card').style.display = links.length ? '' : 'none';
+    document.getElementById('links-list').innerHTML = links.map((l, i) => `
+      <div class="link-row">
+        <span class="link-product">${escapeHtml(l.product)}</span>
+        <span class="link-url">${escapeHtml(l.url)}</span>
+        <button class="copy-btn" onclick="copyLink(${i})">${ar ? 'نسخ' : 'Copy'}</button>
+      </div>`).join('');
+
+    const subs = access.subs || [];
+    document.getElementById('subs-card').style.display = isMain && subs.length ? '' : 'none';
+    if (isMain && subs.length) {
+      const count = (id) => clients.filter(c => c.ib_id === id).length;
+      const direct = clients.filter(c => c.ib_id === access.ib_id).length;
+      document.getElementById('subs-list').innerHTML =
+        `<button class="sub-pill ${subFilter === 'all' ? 'active' : ''}" onclick="setSubFilter('all')">${ar ? 'الكل' : 'All'}<span>${clients.length}</span></button>` +
+        `<button class="sub-pill ${subFilter === access.ib_id ? 'active' : ''}" onclick="setSubFilter('${escapeHtml(access.ib_id)}')">${ar ? 'عملائي المباشرون' : 'My direct clients'}<span>${direct}</span></button>` +
+        subs.map(s => `<button class="sub-pill ${subFilter === s.id ? 'active' : ''}" onclick="setSubFilter('${escapeHtml(s.id)}')"><bdi>${escapeHtml(s.name)}${s.code ? ` (${escapeHtml(s.code)})` : ''}</bdi><span>${count(s.id)}</span></button>`).join('');
+    }
+    document.getElementById('th-under').style.display = isMain && subs.length ? '' : 'none';
+    renderClients();
+  };
+
+  window.setSubFilter = function(id) { subFilter = id; renderAll(); };
+  window.copyLink = function(i) {
+    const l = (access.links || [])[i];
+    if (!l) return;
+    navigator.clipboard.writeText(l.url).then(() => toast(isAr() ? 'تم نسخ الرابط' : 'Link copied'));
+  };
+
+  window.renderClients = function() {
+    if (!access) return;
+    const ar = isAr();
+    const isMain = access.tier !== 'sub';
+    const showUnder = isMain && (access.subs || []).length;
+    const subName = {};
+    (access.subs || []).forEach(s => { subName[s.id] = s; });
+    const q = (document.getElementById('client-search').value || '').trim().toLowerCase();
+    const rows = clients.filter(c => {
+      if (subFilter !== 'all' && c.ib_id !== subFilter) return false;
+      if (!q) return true;
+      return (c.name || '').toLowerCase().includes(q) || (c.logins || []).some(l => String(l).includes(q));
+    });
+    document.getElementById('clients-body').innerHTML = rows.length ? rows.map(c => {
+      const under = c.ib_id === access.ib_id ? (ar ? 'مباشر' : 'Direct') : (subName[c.ib_id] ? `${subName[c.ib_id].name}${subName[c.ib_id].code ? ` (${subName[c.ib_id].code})` : ''}` : '—');
+      return `<tr>
+        <td>${escapeHtml(c.name) || '<span class="muted">—</span>'}</td>
+        <td>${(c.logins || []).length ? `<div class="logins">${c.logins.map(l => `<span class="login-chip">${escapeHtml(l)}</span>`).join('')}</div>` : `<span class="muted">${ar ? 'لا يوجد حساب بعد' : 'No account yet'}</span>`}</td>
+        ${showUnder ? `<td class="col-under muted">${escapeHtml(under)}</td>` : ''}
+      </tr>`;
+    }).join('') : `<tr><td colspan="3" class="empty">${q || subFilter !== 'all' ? (ar ? 'لا نتائج.' : 'No matching clients.') : (ar ? 'لا يوجد عملاء بعد. شارك روابط التسجيل الخاصة بك للبدء.' : 'No clients yet. Share your signup links to get started.')}</td></tr>`;
+  };
+</script>
+</body>
+</html>
