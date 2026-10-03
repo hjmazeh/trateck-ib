@@ -245,7 +245,7 @@
 
   <div class="wrap">
     <h1 class="page-title"><span id="dash-name"></span> <span class="code" id="dash-code"></span></h1>
-    <p class="page-sub" id="dash-sub"></p>
+    <p class="page-sub"><span class="lang-en">Introducing Broker</span><span class="lang-ar">وسيط معرِّف</span></p>
 
     <div class="tiles">
       <div class="tile"><div class="tile-value" id="t-clients">—</div><div class="tile-label"><span class="lang-en">Clients</span><span class="lang-ar">العملاء</span></div></div>
@@ -264,11 +264,22 @@
 
     <div class="card" id="subs-card" style="display:none;">
       <div class="card-title"><span class="lang-en">Sub-IBs</span><span class="lang-ar">الوسطاء الفرعيون</span></div>
-      <div class="sub-list" id="subs-list"></div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th><span class="lang-en">Sub-IB</span><span class="lang-ar">الوسيط الفرعي</span></th>
+            <th><span class="lang-en">Clients</span><span class="lang-ar">العملاء</span></th>
+            <th><span class="lang-en">Trading accounts</span><span class="lang-ar">حسابات التداول</span></th>
+            <th></th>
+          </tr></thead>
+          <tbody id="subs-body"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="card">
       <div class="card-title"><span class="lang-en">Clients</span><span class="lang-ar">العملاء</span></div>
+      <div class="sub-list" id="client-filters" style="margin-bottom:14px;display:none;"></div>
       <input class="search" id="client-search" oninput="renderClients()" placeholder="Search name or account number…">
       <div style="overflow-x:auto;">
         <table>
@@ -336,12 +347,15 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // What this IB may see: their access record (written by Trateck staff
-  // when they link the IB to this login) and the "IB cards" of their own
-  // clients -- name and MT5 account numbers only. Nothing else about a
-  // client is readable from here (enforced by the database rules).
+  // What this IB may see -- all enforced by the database rules:
+  //  - ib_portal_access/{me}: their own name, code, sub-IBs and links.
+  //    Nothing in it says whether they are themselves a sub-IB.
+  //  - ib_clients where ib_id == me: their OWN clients, name + accounts.
+  //  - ib_accounts where main_ib_id == me: account numbers of everyone
+  //    under them (their sub-IBs' clients appear without names).
   let access = null;
-  let clients = [];
+  let own = [];          // ib_clients cards (own clients: name + logins)
+  let downline = [];     // ib_accounts cards (no names) with ib_id != me
   let subFilter = 'all';
   let unsubs = [];
 
@@ -392,7 +406,7 @@
 
   onAuthStateChanged(auth, (user) => {
     unsubs.forEach(u => u()); unsubs = [];
-    access = null; clients = []; subFilter = 'all';
+    access = null; own = []; downline = []; subFilter = 'all';
     if (!user) { showView('view-login'); return; }
     showView('view-loading');
     const accessUnsub = onSnapshot(doc(db, 'ib_portal_access', user.uid), (snap) => {
@@ -402,9 +416,9 @@
         showView('view-denied');
         return;
       }
-      const first = !access || access.ib_id !== snap.data().ib_id || access.tier !== snap.data().tier;
+      const changedIb = !access || access.ib_id !== snap.data().ib_id;
       access = snap.data();
-      if (first) listenClients();
+      if (changedIb) listenClients();
       renderAll();
       showView('view-dash');
     }, (err) => {
@@ -418,39 +432,45 @@
     unsubs.push(accessUnsub);
   });
 
-  // A main IB sees everyone under them (their own clients and their
-  // sub-IBs' clients); a sub-IB sees only their own.
-  let clientsUnsub = null;
+  let clientUnsubs = [];
   function listenClients() {
-    if (clientsUnsub) { clientsUnsub(); unsubs = unsubs.filter(u => u !== clientsUnsub); }
-    const field = access.tier === 'sub' ? 'ib_id' : 'main_ib_id';
-    clientsUnsub = onSnapshot(query(collection(db, 'ib_clients'), where(field, '==', access.ib_id)), (snap) => {
-      clients = snap.docs.map(d => d.data()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      renderAll();
-    }, (err) => {
+    clientUnsubs.forEach(u => u());
+    unsubs = unsubs.filter(u => !clientUnsubs.includes(u));
+    const fail = (err) => {
       console.error(err);
       document.getElementById('clients-body').innerHTML = `<tr><td colspan="3" class="empty">${isAr() ? 'تعذّر تحميل العملاء.' : 'Couldn\'t load your clients.'}</td></tr>`;
-    });
-    unsubs.push(clientsUnsub);
+    };
+    clientUnsubs = [
+      onSnapshot(query(collection(db, 'ib_clients'), where('ib_id', '==', access.ib_id)), (snap) => {
+        own = snap.docs.map(d => d.data()).sort((x, y) => (x.name || '').localeCompare(y.name || ''));
+        renderAll();
+      }, fail),
+      onSnapshot(query(collection(db, 'ib_accounts'), where('main_ib_id', '==', access.ib_id)), (snap) => {
+        downline = snap.docs.map(d => d.data()).filter(c => c.ib_id !== access.ib_id);
+        renderAll();
+      }, fail),
+    ];
+    unsubs.push(...clientUnsubs);
   }
+
+  function subOf(id) { return (access.subs || []).find(s => s.id === id) || null; }
+  function subLabel(s) { return s ? `${s.name}${s.code ? ` (${s.code})` : ''}` : '—'; }
+  function accountsOf(list) { return list.reduce((n, c) => n + (c.logins || []).length, 0); }
 
   window.renderAll = function() {
     if (!access) return;
     const ar = isAr();
-    const isMain = access.tier !== 'sub';
+    const subs = access.subs || [];
 
     document.getElementById('nav-ib-name').textContent = access.ib_name || '';
     document.getElementById('nav-ib-code').textContent = access.ib_code ? `(${access.ib_code})` : '';
     document.getElementById('dash-name').textContent = access.ib_name || '';
     document.getElementById('dash-code').textContent = access.ib_code || '';
-    document.getElementById('dash-sub').textContent = isMain
-      ? (ar ? 'وسيط رئيسي' : 'Main IB')
-      : (ar ? `وسيط فرعي لدى ${access.main_ib_name || ''}` : `Sub-IB of ${access.main_ib_name || ''}`);
 
-    document.getElementById('t-clients').textContent = clients.length;
-    document.getElementById('t-accounts').textContent = clients.reduce((n, c) => n + (c.logins || []).length, 0);
-    document.getElementById('t-subs-tile').style.display = isMain && (access.subs || []).length ? '' : 'none';
-    document.getElementById('t-subs').textContent = (access.subs || []).length;
+    document.getElementById('t-clients').textContent = own.length + downline.length;
+    document.getElementById('t-accounts').textContent = accountsOf(own) + accountsOf(downline);
+    document.getElementById('t-subs-tile').style.display = subs.length ? '' : 'none';
+    document.getElementById('t-subs').textContent = subs.length;
 
     const links = access.links || [];
     document.getElementById('links-card').style.display = links.length ? '' : 'none';
@@ -461,21 +481,36 @@
         <button class="copy-btn" onclick="copyLink(${i})">${ar ? 'نسخ' : 'Copy'}</button>
       </div>`).join('');
 
-    const subs = access.subs || [];
-    document.getElementById('subs-card').style.display = isMain && subs.length ? '' : 'none';
-    if (isMain && subs.length) {
-      const count = (id) => clients.filter(c => c.ib_id === id).length;
-      const direct = clients.filter(c => c.ib_id === access.ib_id).length;
-      document.getElementById('subs-list').innerHTML =
-        `<button class="sub-pill ${subFilter === 'all' ? 'active' : ''}" onclick="setSubFilter('all')">${ar ? 'الكل' : 'All'}<span>${clients.length}</span></button>` +
-        `<button class="sub-pill ${subFilter === access.ib_id ? 'active' : ''}" onclick="setSubFilter('${escapeHtml(access.ib_id)}')">${ar ? 'عملائي المباشرون' : 'My direct clients'}<span>${direct}</span></button>` +
-        subs.map(s => `<button class="sub-pill ${subFilter === s.id ? 'active' : ''}" onclick="setSubFilter('${escapeHtml(s.id)}')"><bdi>${escapeHtml(s.name)}${s.code ? ` (${escapeHtml(s.code)})` : ''}</bdi><span>${count(s.id)}</span></button>`).join('');
+    // Sub-IBs: a real list, with what's under each.
+    document.getElementById('subs-card').style.display = subs.length ? '' : 'none';
+    document.getElementById('subs-body').innerHTML = subs.map(s => {
+      const theirs = downline.filter(c => c.ib_id === s.id);
+      return `<tr>
+        <td><bdi>${escapeHtml(subLabel(s))}</bdi></td>
+        <td>${theirs.length}</td>
+        <td>${accountsOf(theirs)}</td>
+        <td><button class="copy-btn" onclick="setSubFilter('${escapeHtml(s.id)}', true)">${ar ? 'عرض الحسابات' : 'Show accounts'}</button></td>
+      </tr>`;
+    }).join('');
+
+    // Filters above the clients table (only when there are sub-IBs).
+    const filters = document.getElementById('client-filters');
+    filters.style.display = subs.length ? '' : 'none';
+    if (subs.length) {
+      const pill = (id, label, n) => `<button class="sub-pill ${subFilter === id ? 'active' : ''}" onclick="setSubFilter('${escapeHtml(id)}')"><bdi>${escapeHtml(label)}</bdi><span>${n}</span></button>`;
+      filters.innerHTML = pill('all', ar ? 'الكل' : 'All', own.length + downline.length) +
+        pill('own', ar ? 'عملائي المباشرون' : 'My direct clients', own.length) +
+        subs.map(s => pill(s.id, subLabel(s), downline.filter(c => c.ib_id === s.id).length)).join('');
     }
-    document.getElementById('th-under').style.display = isMain && subs.length ? '' : 'none';
+    document.getElementById('th-under').style.display = subs.length ? '' : 'none';
     renderClients();
   };
 
-  window.setSubFilter = function(id) { subFilter = id; renderAll(); };
+  window.setSubFilter = function(id, scroll) {
+    subFilter = id;
+    renderAll();
+    if (scroll) document.getElementById('client-filters').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   window.copyLink = function(i) {
     const l = (access.links || [])[i];
     if (!l) return;
@@ -485,24 +520,22 @@
   window.renderClients = function() {
     if (!access) return;
     const ar = isAr();
-    const isMain = access.tier !== 'sub';
-    const showUnder = isMain && (access.subs || []).length;
-    const subName = {};
-    (access.subs || []).forEach(s => { subName[s.id] = s; });
+    const showUnder = (access.subs || []).length > 0;
     const q = (document.getElementById('client-search').value || '').trim().toLowerCase();
-    const rows = clients.filter(c => {
-      if (subFilter !== 'all' && c.ib_id !== subFilter) return false;
-      if (!q) return true;
-      return (c.name || '').toLowerCase().includes(q) || (c.logins || []).some(l => String(l).includes(q));
-    });
-    document.getElementById('clients-body').innerHTML = rows.length ? rows.map(c => {
-      const under = c.ib_id === access.ib_id ? (ar ? 'مباشر' : 'Direct') : (subName[c.ib_id] ? `${subName[c.ib_id].name}${subName[c.ib_id].code ? ` (${subName[c.ib_id].code})` : ''}` : '—');
-      return `<tr>
-        <td>${escapeHtml(c.name) || '<span class="muted">—</span>'}</td>
-        <td>${(c.logins || []).length ? `<div class="logins">${c.logins.map(l => `<span class="login-chip">${escapeHtml(l)}</span>`).join('')}</div>` : `<span class="muted">${ar ? 'لا يوجد حساب بعد' : 'No account yet'}</span>`}</td>
-        ${showUnder ? `<td class="col-under muted">${escapeHtml(under)}</td>` : ''}
-      </tr>`;
-    }).join('') : `<tr><td colspan="3" class="empty">${q || subFilter !== 'all' ? (ar ? 'لا نتائج.' : 'No matching clients.') : (ar ? 'لا يوجد عملاء بعد. شارك روابط التسجيل الخاصة بك للبدء.' : 'No clients yet. Share your signup links to get started.')}</td></tr>`;
+    // Own clients carry a name; sub-IBs' clients are account numbers only.
+    let rows = [
+      ...own.map(c => ({ name: c.name, logins: c.logins || [], under: null, mine: true })),
+      ...downline.map(c => ({ name: null, logins: c.logins || [], under: subOf(c.ib_id), subId: c.ib_id, mine: false })),
+    ];
+    if (subFilter === 'own') rows = rows.filter(r => r.mine);
+    else if (subFilter !== 'all') rows = rows.filter(r => r.subId === subFilter);
+    if (q) rows = rows.filter(r => (r.name || '').toLowerCase().includes(q) || r.logins.some(l => String(l).includes(q)) ||
+      (r.under && subLabel(r.under).toLowerCase().includes(q)));
+    document.getElementById('clients-body').innerHTML = rows.length ? rows.map(r => `<tr>
+        <td>${r.mine ? (escapeHtml(r.name) || '<span class="muted">—</span>') : `<span class="muted">${ar ? 'عميل لدى' : 'Client of'} <bdi>${escapeHtml(subLabel(r.under))}</bdi></span>`}</td>
+        <td>${r.logins.length ? `<div class="logins">${r.logins.map(l => `<span class="login-chip">${escapeHtml(l)}</span>`).join('')}</div>` : `<span class="muted">${ar ? 'لا يوجد حساب بعد' : 'No account yet'}</span>`}</td>
+        ${showUnder ? `<td class="col-under muted">${r.mine ? (ar ? 'مباشر' : 'Direct') : `<bdi>${escapeHtml(subLabel(r.under))}</bdi>`}</td>` : ''}
+      </tr>`).join('') : `<tr><td colspan="3" class="empty">${q || subFilter !== 'all' ? (ar ? 'لا نتائج.' : 'No matching clients.') : (ar ? 'لا يوجد عملاء بعد. شارك روابط التسجيل الخاصة بك للبدء.' : 'No clients yet. Share your signup links to get started.')}</td></tr>`;
   };
 </script>
 </body>
